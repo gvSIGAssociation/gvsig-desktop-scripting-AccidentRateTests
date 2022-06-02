@@ -14,6 +14,8 @@ from gvsig.libs.formpanel import FormPanel
 from org.gvsig.tools.swing.api import ToolsSwingUtils, ToolsSwingLocator
 from org.gvsig.tools import ToolsLocator
 
+import addons.AccidentRateTests.searchbookmarks.searchbookmarks
+reload(addons.AccidentRateTests.searchbookmarks.searchbookmarks)
 from addons.AccidentRateTests.searchbookmarks.searchbookmarks import getSearchBookmarks
 
 class TestSearchBookmarsTableModel(AbstractTableModel):
