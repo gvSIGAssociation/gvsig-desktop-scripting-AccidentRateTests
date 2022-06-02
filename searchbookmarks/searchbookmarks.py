@@ -17,16 +17,17 @@ class SearchBookmark(object):
   def __init__(self, pathname):
     self.__pathname = pathname
     self.__searchParameters = None
-    self.__name = None
+    self.__name = "unknown"
     self.__lastExecutionStatus = "unknown"
-
+    try:
+      self.__name = os.path.basename(pathname).split("!")[2]
+    except:
+      pass
     self.__enabled = True
     
     self.__table_name = None
     self.__result_should_have_rows = "true"
     self.__first_row_of_results_must_have_values = "true"
-
-    self.load()
 
   def getName(self):
     return self.__name
@@ -121,13 +122,28 @@ class SearchBookmark(object):
       DisposeUtils.dispose(store)
 
 
-def getSearchBookmarks():
+def getSearchBookmarks(taskStatus = None):
+  if taskStatus == None:
+    taskStatus = ToolsLocator.getTaskStatusManager().createDefaultSimpleTaskStatus("Cargando tests")
   searchBookmarks = list()
   folder = gvsig.getResource(__file__,"..","data","searchbookmarks")
-  for f in os.listdir(folder):
+  files = os.listdir(folder)
+  taskStatus.setRangeOfValues(0,len(files))
+  for f in files:
+    if taskStatus.isCancellationRequested():
+      taskStatus.cancel()
+      return
     if f.endswith(".properties") :
+      s = os.path.basename(f)
+      if len(s)>60:
+        s = s[:60] + "..."
+      taskStatus.message(s)
       searchBookmark = SearchBookmark(os.path.join(folder,f))
+      taskStatus.message(searchBookmark.getName())
+      searchBookmark .load()
       searchBookmarks.append(searchBookmark)
+    taskStatus.incrementCurrentValue()
+  taskStatus.terminate()
   return searchBookmarks
   
 def main(*args):

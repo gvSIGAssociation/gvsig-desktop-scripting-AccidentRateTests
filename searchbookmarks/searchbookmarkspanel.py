@@ -1,14 +1,18 @@
 # encoding: utf-8
 
 import gvsig
+import thread
+from time import sleep
 
 from java.lang import Boolean, String
 
 from javax.swing.table import AbstractTableModel
+from javax.swing import SwingUtilities
 
 from gvsig.libs.formpanel import FormPanel
 
-from org.gvsig.tools.swing.api import ToolsSwingUtils
+from org.gvsig.tools.swing.api import ToolsSwingUtils, ToolsSwingLocator
+from org.gvsig.tools import ToolsLocator
 
 from addons.AccidentRateTests.searchbookmarks.searchbookmarks import getSearchBookmarks
 
@@ -54,18 +58,72 @@ class TestSearchBookmarsTableModel(AbstractTableModel):
 class TestSearchBookmarsPanel(FormPanel):
   def __init__(self):
     FormPanel.__init__(self,gvsig.getResource(__file__,"searchbookmarkspanel.xml"))
-    self.__tests = getSearchBookmarks()
+    self.__tests = list() 
     self.initComponents()
 
   def initComponents(self):
+    self.taskStatusController = ToolsSwingLocator.getTaskStatusSwingManager().createTaskStatusController(
+      None,
+      self.lblStatusTitle,
+      self.lblStatusMessage,
+      self.pbStatus,
+      self.btnStatusCancel,
+      None
+    )
     self.__tableModel = TestSearchBookmarsTableModel(self.__tests)
     self.tblTests.setModel(self.__tableModel)
+    self.tblTests.setAutoCreateRowSorter(True)
     ToolsSwingUtils.ensureRowsCols(self.asJComponent(), 25, 100, 30, 150)
 
-  def btnExecuteTests_click(self,*args):
+    thread.start_new_thread(lambda : self.__loadBookmarks(), tuple())
+
+  def __loadBookmarks(self):
+    taskStatus = ToolsLocator.getTaskStatusManager().createDefaultSimpleTaskStatus("Cargando favoritos")
+    self.taskStatusController.bind(taskStatus)
+    self.taskStatusController.setVisible(True)
+    tests = getSearchBookmarks(taskStatus)
+    self.taskStatusController.setVisible(False)
+    self.setTableModel(tests)
+
+  def setTableModel(self, tests):
+    if not SwingUtilities.isEventDispatchThread():
+      SwingUtilities.invokeLater(lambda : self.setTableModel( tests))
+      return
+    self.__tests = tests
+    self.__tableModel = TestSearchBookmarsTableModel(self.__tests)
+    self.tblTests.setModel(self.__tableModel)
+    self.lblMessage.setText("Cargados %s favoritos." % len(self.__tests))
+    
+  def btnSelectAll_click(self, *args):
     for test in self.__tests:
-     test.run()
+      test.setEnabled(True)
     self.__tableModel.fireTableDataChanged()
+
+  def btnDeselectAll_click(self, *args):
+    for test in self.__tests:
+      test.setEnabled(False)
+    self.__tableModel.fireTableDataChanged()
+   
+  def btnExecuteTests_click(self,*args):
+    thread.start_new_thread(lambda : self.__runtests(), tuple())
+
+  def __runtests(self):
+    taskStatus = ToolsLocator.getTaskStatusManager().createDefaultSimpleTaskStatus("Ejecutando tests")
+    self.taskStatusController.bind(taskStatus)
+    taskStatus.setRangeOfValues(0,len(self.__tests))
+    self.taskStatusController.setVisible(True)
+    for test in self.__tests:
+      if taskStatus.isCancellationRequested():
+        taskStatus.cancel()
+        break
+      taskStatus.message(test.getName())
+      test.run()
+      taskStatus.incrementCurrentValue()
+      sleep(0.01)
+    taskStatus.terminate()
+    self.taskStatusController.setVisible(False)
+    SwingUtilities.invokeLater(lambda : self.__tableModel.fireTableDataChanged())
+  
 
 def main(*args):
   panel = TestSearchBookmarsPanel()
