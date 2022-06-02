@@ -91,16 +91,18 @@ class SearchBookmark(object):
     
     try:
       searchPanel = dataSwingManager.createFeatureStoreSearchPanel(store)
+      searchPanel.setAutomaticallySearch(False)
+      searchPanel.asJComponent() #Fuerza a inicializar el panel
       st = searchPanel.search(self.__searchParameters)
       if st != FeatureStoreSearchPanel.STATUS_OK:
         self.__lastExecutionStatus = "Failed"
         return
       model = searchPanel.getResultsTableModel()
-      if model.getColumnCount()<1:
+      if model.getColumnCount()<1 or model.hasErrors():
           self.__lastExecutionStatus = "Failed, no columns"
           return
       if self.__result_should_have_rows == "true":
-        if model.getRowCount()<1:
+        if model.getRowCount()<1 or model.hasErrors():
           self.__lastExecutionStatus = "Failed, no rows"
           return
       if self.__first_row_of_results_must_have_values == "true":
@@ -109,16 +111,19 @@ class SearchBookmark(object):
           x = model.getValueAt(0, columnIndex)
           if x!=None:
             ok = True
-        if not ok:
+        if not ok or model.hasErrors():
           self.__lastExecutionStatus = "Failed, first row empty"
+          return
+      if model.hasErrors():
+          self.__lastExecutionStatus = "Error (0)"
           return
       self.__lastExecutionStatus = "Ok"
     except:
       self.__lastExecutionStatus = "Error"
     finally:
-      DisposeUtils.dispose(model)
-      DisposeUtils.dispose(store)
-      DisposeUtils.dispose(store)
+      DisposeUtils.disposeQuietly(searchPanel)
+      DisposeUtils.disposeQuietly(model)
+      DisposeUtils.disposeQuietly(store)
 
 
 def getSearchBookmarks():
