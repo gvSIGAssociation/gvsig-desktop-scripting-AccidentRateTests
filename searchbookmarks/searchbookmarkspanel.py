@@ -79,6 +79,12 @@ class TestSearchBookmarsPanel(FormPanel):
 
     thread.start_new_thread(lambda : self.__loadBookmarks(), tuple())
 
+  def message(self,msg):
+    if not SwingUtilities.isEventDispatchThread():
+      SwingUtilities.invokeLater(lambda : self.message(msg))
+      return
+    self.lblMessage.setText(msg)
+ 
   def __loadBookmarks(self):
     taskStatus = ToolsLocator.getTaskStatusManager().createDefaultSimpleTaskStatus("Cargando favoritos")
     self.taskStatusController.bind(taskStatus)
@@ -94,7 +100,7 @@ class TestSearchBookmarsPanel(FormPanel):
     self.__tests = tests
     self.__tableModel = TestSearchBookmarsTableModel(self.__tests)
     self.tblTests.setModel(self.__tableModel)
-    self.lblMessage.setText("Cargados %s favoritos." % len(self.__tests))
+    self.mesage("Cargados %s favoritos." % len(self.__tests))
     
   def btnSelectAll_click(self, *args):
     for test in self.__tests:
