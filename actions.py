@@ -11,7 +11,7 @@ from org.gvsig.scripting.app.extension import ScriptingExtension
 from org.gvsig.tools import ToolsLocator
 from org.gvsig.tools.swing.api import ToolsSwingLocator
 
-from addons.AccidentRateTests.searchbookmarkspanel import TestSearchBookmarsPanel
+from addons.AccidentRateTests.searchbookmarks.searchbookmarkspanel import TestSearchBookmarsPanel
 
 class AccidentRateTestsExtension(ScriptingExtension):
   def __init__(self):
@@ -29,7 +29,7 @@ class AccidentRateTestsExtension(ScriptingExtension):
   def execute(self,actionCommand, *args):
     actionCommand = actionCommand.lower()
     if actionCommand == "tools-accidentrate-testsearchbookmars":
-      TestSearchBookmarsPanel().showWindow("Test favoritos de la ficha de busqueda"))
+      TestSearchBookmarsPanel().showWindow("Test favoritos de la ficha de busqueda")
 
 def selfRegister():
   application = ApplicationLocator.getManager()
