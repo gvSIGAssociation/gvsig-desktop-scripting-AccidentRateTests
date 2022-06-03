@@ -99,11 +99,19 @@ class SearchBookmark(object):
         self.__lastExecutionStatus = "Failed"
         return
       model = searchPanel.getResultsTableModel()
-      if model.getColumnCount()<1 or model.hasErrors():
+      n = model.getColumnCount()
+      if model.hasErrors():
+          self.__lastExecutionStatus = "Failed, error getting number of columns"
+          return
+      if n<1:
           self.__lastExecutionStatus = "Failed, no columns"
           return
       if self.__result_should_have_rows == "true":
-        if model.getRowCount()<1 or model.hasErrors():
+        n = model.getRowCount()
+        if model.hasErrors():
+          self.__lastExecutionStatus = "Failed, error getting number of rows"
+          return
+        if n<1:
           self.__lastExecutionStatus = "Failed, no rows"
           return
       if self.__first_row_of_results_must_have_values == "true":
@@ -112,11 +120,14 @@ class SearchBookmark(object):
           x = model.getValueAt(0, columnIndex)
           if x!=None:
             ok = True
-        if not ok or model.hasErrors():
+        if model.hasErrors():
+          self.__lastExecutionStatus = "Failed, error getting cells of first row"
+          return
+        if not ok:
           self.__lastExecutionStatus = "Failed, first row empty"
           return
       if model.hasErrors():
-          self.__lastExecutionStatus = "Error (0)"
+          self.__lastExecutionStatus = "Failed, error getting data"
           return
       self.__lastExecutionStatus = "Ok"
     except:
