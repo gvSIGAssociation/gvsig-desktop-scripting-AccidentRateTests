@@ -100,7 +100,7 @@ class TestSearchBookmarsPanel(FormPanel):
     self.__tests = tests
     self.__tableModel = TestSearchBookmarsTableModel(self.__tests)
     self.tblTests.setModel(self.__tableModel)
-    self.mesage("Cargados %s favoritos." % len(self.__tests))
+    self.message("Cargados %s favoritos." % len(self.__tests))
     
   def btnSelectAll_click(self, *args):
     for test in self.__tests:
@@ -121,6 +121,8 @@ class TestSearchBookmarsPanel(FormPanel):
     taskStatus.setRangeOfValues(0,len(self.__tests))
     self.taskStatusController.setVisible(True)
     for test in self.__tests:
+      #LOGGER(test.getName()
+      #LOGGER(test.getSearchParameters().toString())
       if taskStatus.isCancellationRequested():
         taskStatus.cancel()
         break
