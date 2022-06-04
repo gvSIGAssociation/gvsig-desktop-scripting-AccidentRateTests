@@ -14,9 +14,13 @@ from gvsig.libs.formpanel import FormPanel
 from org.gvsig.tools.swing.api import ToolsSwingUtils, ToolsSwingLocator
 from org.gvsig.tools import ToolsLocator
 
+from org.gvsig.scripting.app.extension.ScriptingUtils import log, INFO, WARN
+
 import addons.AccidentRateTests.searchbookmarks.searchbookmarks
 reload(addons.AccidentRateTests.searchbookmarks.searchbookmarks)
 from addons.AccidentRateTests.searchbookmarks.searchbookmarks import getSearchBookmarks
+
+
 
 class TestSearchBookmarsTableModel(AbstractTableModel):
   def __init__(self, tests):
@@ -121,8 +125,8 @@ class TestSearchBookmarsPanel(FormPanel):
     taskStatus.setRangeOfValues(0,len(self.__tests))
     self.taskStatusController.setVisible(True)
     for test in self.__tests:
-      #LOGGER(test.getName()
-      #LOGGER(test.getSearchParameters().toString())
+      log(INFO,"TEST: " + test.getName(),None)
+      log(INFO,"\n"+test.getSearchParameters().toString(),None)
       if taskStatus.isCancellationRequested():
         taskStatus.cancel()
         break
@@ -133,9 +137,18 @@ class TestSearchBookmarsPanel(FormPanel):
     taskStatus.terminate()
     self.taskStatusController.setVisible(False)
     SwingUtilities.invokeLater(lambda : self.__tableModel.fireTableDataChanged())
-  
 
+  def btnGoSearchPanel_click(self,*args):
+    pass
+
+  def btnShowParameters_click(self, *args):
+    pass
+
+  def btnExport_click(self, *args):
+    pass
+    
 def main(*args):
+  log(INFO,"Hola mundo",None)
   panel = TestSearchBookmarsPanel()
   panel.showWindow("Test favoritos de la ficha de busqueda")
   
