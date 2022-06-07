@@ -12,9 +12,15 @@ from javax.swing import SwingUtilities
 from gvsig.libs.formpanel import FormPanel
 
 from org.gvsig.tools.swing.api import ToolsSwingUtils, ToolsSwingLocator
+from org.gvsig.tools.swing.api.windowmanager import WindowManager
 from org.gvsig.tools import ToolsLocator
+from org.gvsig.tools.dispose import  DisposeUtils
 
 from org.gvsig.scripting.app.extension.ScriptingUtils import log, INFO, WARN
+from org.gvsig.fmap.dal import DALLocator
+from org.gvsig.fmap.dal.swing import DALSwingLocator
+from org.gvsig.app import ApplicationLocator
+from org.gvsig.app.project.documents.table import TableManager
 
 import addons.AccidentRateTests.searchbookmarks.searchbookmarks
 reload(addons.AccidentRateTests.searchbookmarks.searchbookmarks)
@@ -104,7 +110,12 @@ class TestSearchBookmarsPanel(FormPanel):
     self.__tests = tests
     self.__tableModel = TestSearchBookmarsTableModel(self.__tests)
     self.tblTests.setModel(self.__tableModel)
+    self.tblTests.getSelectionModel().addListSelectionListener(self.tblTest_selectionChanged)
     self.message("Cargados %s favoritos." % len(self.__tests))
+
+  def tblTest_selectionChanged(self, *args):
+    row = self.tblTests.getSelectedRow()
+    self.message("Linea %s de %s" % (row,len(self.__tests)))
     
   def btnSelectAll_click(self, *args):
     for test in self.__tests:
@@ -124,6 +135,7 @@ class TestSearchBookmarsPanel(FormPanel):
     self.taskStatusController.bind(taskStatus)
     taskStatus.setRangeOfValues(0,len(self.__tests))
     self.taskStatusController.setVisible(True)
+    failsCounter = 0
     for test in self.__tests:
       log(INFO,"TEST: " + test.getName(),None)
       log(INFO,"\n"+test.getSearchParameters().toString(),None)
@@ -132,23 +144,131 @@ class TestSearchBookmarsPanel(FormPanel):
         break
       taskStatus.message(test.getName())
       test.run()
+      if test.isFailed():
+        failsCounter+=1
       taskStatus.incrementCurrentValue()
       sleep(0.01)
     taskStatus.terminate()
     self.taskStatusController.setVisible(False)
     SwingUtilities.invokeLater(lambda : self.__tableModel.fireTableDataChanged())
-
+    self.message("Han fallado %s de %s" % (failsCounter, len(self.__tests)))
+    
   def btnGoSearchPanel_click(self,*args):
-    pass
+    row = self.tblTests.getSelectedRow()
+    if row<0 :
+      self.message("Debera seleccionar un test")
+      return
+    test = self.__tests[row]
+    store = test.getStore()
+    if store == None:
+      self.message("Tabla no encontrada")
+      return
+    dataSwingManager = DALSwingLocator.getDataSwingManager()
+    searchPanel = dataSwingManager.createFeatureStoreSearchPanel(store)
+    searchPanel.setAutomaticallySearch(False)
+    searchPanel.put(test.getSearchParameters())
+    ToolsSwingLocator.getWindowManager().showWindow(
+      searchPanel.asJComponent(), 
+      "Buscar: %s [Favorito %s]" % (test.getTableName(), test.getName()), 
+      WindowManager.WINDOW
+    );
 
   def btnShowParameters_click(self, *args):
-    pass
+    toolsSwingManager = ToolsSwingLocator.getToolsSwingManager()
+    row = self.tblTests.getSelectedRow()
+    if row<0 :
+      self.message("Debera seleccionar un test")
+      return
+    test = self.__tests[row]
+    toolsSwingManager .showZoomDialog(
+      self.asJComponent(), 
+      test.getName(), 
+      "%s\n\n-------------------------------\n\n%s" % (
+        test.getSearchParameters().toString(), 
+        test.getLastExecutionStatus()
+      ),
+      False
+    )
+    
 
   def btnExport_click(self, *args):
-    pass
+     thread.start_new_thread(lambda : self.export(), tuple())
+   
+  def export(self):
+    name = "search_bookmark_tests"
+    taskStatus = ToolsLocator.getTaskStatusManager().createDefaultSimpleTaskStatus("Exportando tests")
+    self.taskStatusController.bind(taskStatus)
+    self.taskStatusController.setVisible(True)   
+    taskStatus.message("Creando tabla temporal")
+    store = self.createTemporaryH2Store(name)
+    taskStatus.setRangeOfValues(0,len(self.__tests))
+    taskStatus.message("Guardando registros...")
+    store.edit()
+    pk = 1
+    for test in self.__tests:
+      if taskStatus.isCancellationRequested():
+        taskStatus.cancel()
+        break
+      taskStatus.message(test.getName())
+      f = store.createNewFeature()
+      f.set("pk",pk)
+      f.set("Activo",test.isEnabled())
+      f.set("Nombre",test.getName())
+      f.set("Tabla",test.getTableName())
+      f.set("Estado",test.getLastExecutionStatus())
+      f.set("Favorito",test.getSearchParameters().toString())
+      store.insert(f)
+      pk+=1
+      taskStatus.incrementCurrentValue()
+    if taskStatus.isCancellationRequested():
+      store.cancelEditing()
+    else:
+      store.finishEditing()
+      application = ApplicationLocator.getApplicationManager()
+      taskStatus.message("Añadiendo la tabla al proyecto")
+      project = application.getCurrentProject()
+      doc = project.createDocument(TableManager.TYPENAME)
+      doc.setStore(store)
+      doc.setName(u"Pruebas de marcador de búsqueda")
+      project.addDocument(doc)
+      DisposeUtils.dispose(store)
+      taskStatus.terminate()
+    self.taskStatusController.setVisible(False)
+ 
+  def createTemporaryH2Store(self, name):
+    dataManager = DALLocator.getDataManager()
+    foldersManager = ToolsLocator.getFoldersManager()
+    
+    tempFile = foldersManager.getUniqueTemporaryFile(name)
+    featureType = dataManager.createFeatureType()
+    featureType.add("pk","INTEGER").setIsPrimaryKey(True)
+    featureType.add("Activo","BOOLEAN")
+    featureType.add("Tabla","STRING",100)
+    featureType.add("Nombre","STRING",255)
+    featureType.add("Estado","STRING",1024)
+    featureType.add("Favorito","STRING",10240)
+
+    serverParameters = dataManager.createServerExplorerParameters("H2Spatial")
+    serverParameters.setFile(tempFile)
+    serverExplorer = dataManager.openServerExplorer("H2Spatial", serverParameters)
+
+    newParametersTarget = serverExplorer.getAddParameters()
+    newParametersTarget.setDynValue("Table", name)
+    newParametersTarget.setDefaultFeatureType(featureType)
+    serverExplorer.add("H2Spatial", newParametersTarget, True)
+
+    openParametersTarget = dataManager.createStoreParameters("H2Spatial")
+    openParametersTarget.setDynValue("database_file", tempFile)
+    openParametersTarget.setDynValue("Table", name)
+
+    storeResults = dataManager.openStore("H2Spatial", openParametersTarget)
+    return storeResults
+
     
 def main(*args):
   log(INFO,"Hola mundo",None)
   panel = TestSearchBookmarsPanel()
   panel.showWindow("Test favoritos de la ficha de busqueda")
+
+
   

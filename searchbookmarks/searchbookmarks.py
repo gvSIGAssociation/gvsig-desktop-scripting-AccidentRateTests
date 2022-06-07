@@ -13,6 +13,10 @@ from org.gvsig.fmap.dal import DALLocator
 from org.gvsig.fmap.dal.swing import DALSwingLocator
 from org.gvsig.fmap.dal.swing.searchpanel import  FeatureStoreSearchPanel 
 
+STATUS_OK = "Ok"
+STATUS_UNKNOWN = "Unknown"
+
+
 class SearchBookmark(object):
   def __init__(self, pathname):
     self.__pathname = pathname
@@ -71,10 +75,18 @@ class SearchBookmark(object):
       self.__enabled = True
     else:
       self.__enabled = False
+
+  def getStore(self):
+    dataManager = DALLocator.getDataManager()
+    try:
+      store = dataManager.getStoresRepository().getStore(self.__table_name)
+    except:
+        return None
+    return store
       
   def run(self):
     if not self.__enabled:
-      self.__lastExecutionStatus = "unknown"
+      self.__lastExecutionStatus = STATUS_UNKNOWN
       return
     dataManager = DALLocator.getDataManager()
     dataSwingManager = DALSwingLocator.getDataSwingManager()
@@ -129,7 +141,7 @@ class SearchBookmark(object):
       if model.hasErrors():
           self.__lastExecutionStatus = "Failed, error getting data"
           return
-      self.__lastExecutionStatus = "Ok"
+      self.__lastExecutionStatus = STATUS_OK
     except:
       self.__lastExecutionStatus = "Error"
     finally:
@@ -137,7 +149,9 @@ class SearchBookmark(object):
       DisposeUtils.disposeQuietly(model)
       DisposeUtils.disposeQuietly(store)
 
-
+  def isFailed(self):
+    return  self.__lastExecutionStatus != STATUS_OK and self.__lastExecutionStatus != STATUS_UNKNOWN
+    
 def getSearchBookmarks(taskStatus = None):
   if taskStatus == None:
     taskStatus = ToolsLocator.getTaskStatusManager().createDefaultSimpleTaskStatus("Cargando tests")
@@ -160,6 +174,7 @@ def getSearchBookmarks(taskStatus = None):
       searchBookmarks.append(searchBookmark)
     taskStatus.incrementCurrentValue()
   taskStatus.terminate()
+  searchBookmarks.sort(key=lambda e:e.getName())
   return searchBookmarks
   
 def main(*args):

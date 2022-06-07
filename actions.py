@@ -47,7 +47,7 @@ def selfRegister():
 
   #
   # Creamos la accion 
-  extension = SQLWorkbenchJExtension()
+  extension = AccidentRateTestsExtension()
   actionManager = PluginsLocator.getActionInfoManager()
   action = actionManager.createAction(
     extension, 
@@ -57,10 +57,10 @@ def selfRegister():
     "tools-accidentrate-testsearchbookmars", # Icon name
     None, # Accelerator
     650700601, # Position 
-    u"TestSearchBookmars" # Tooltip
+    u"Tests de favoritos de la ficha de búsqueda" # Tooltip
   )
   action = actionManager.registerAction(action)
-  application.addMenu(action, u"tools/TestSearchBookmars")
+  application.addMenu(action, u"tools/_AccidentRate/Administration/Tests de favoritos de la ficha de búsqueda")
       
 def main(*args):
    #selfRegister()
