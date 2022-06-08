@@ -4,6 +4,8 @@ import gvsig
 
 import os
 from java.io import FileInputStream
+from java.lang import StringBuilder
+
 from java.util import Properties
 
 from org.gvsig.tools import ToolsLocator
@@ -12,6 +14,8 @@ from org.gvsig.tools.dispose import DisposeUtils
 from org.gvsig.fmap.dal import DALLocator
 from org.gvsig.fmap.dal.swing import DALSwingLocator
 from org.gvsig.fmap.dal.swing.searchpanel import  FeatureStoreSearchPanel 
+
+from org.gvsig.scripting.app.extension.ScriptingUtils import log, INFO, WARN
 
 STATUS_OK = "Ok"
 STATUS_UNKNOWN = "Unknown"
@@ -97,15 +101,23 @@ class SearchBookmark(object):
       store = dataManager.getStoresRepository().getStore(self.__table_name)
       if store == None:
         self.__lastExecutionStatus = "Table not found"
+        log(WARN,self.__lastExecutionStatus,None)
         return
     except:
         self.__lastExecutionStatus = "Table not open"
+        log(WARN,self.__lastExecutionStatus,None)
         return
     
     try:
+      featureType = store.getDefaultFeatureType()
+      errMessage = StringBuilder()
+      if not self.__searchParameters.isValid(featureType,errMessage):
+        self.__lastExecutionStatus = errMessage.toString()
+        log(WARN,self.__lastExecutionStatus,None)
+        return
       searchPanel = dataSwingManager.createFeatureStoreSearchPanel(store)
       searchPanel.setAutomaticallySearch(False)
-      searchPanel.asJComponent() #Fuerza a inicializar el panel
+      #searchPanel.asJComponent() #Fuerza a inicializar el panel
       st = searchPanel.search(self.__searchParameters)
       if st != FeatureStoreSearchPanel.STATUS_OK:
         self.__lastExecutionStatus = "Failed"
