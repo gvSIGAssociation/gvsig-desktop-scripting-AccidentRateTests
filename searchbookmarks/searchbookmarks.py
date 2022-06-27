@@ -79,6 +79,8 @@ class SearchBookmark(object):
       self.__enabled = True
     else:
       self.__enabled = False
+    if self.__searchParameters.getQuery().getLimit() == 0:
+      self.__searchParameters.getQuery().clearLimit()
 
   def getStore(self):
     dataManager = DALLocator.getDataManager()
@@ -108,35 +110,38 @@ class SearchBookmark(object):
         log(WARN,self.__lastExecutionStatus,None)
         return
     
+    validationMessage = ""
     try:
+      searchParameters = self.__searchParameters.getCopy()
       featureType = store.getDefaultFeatureType()
       errMessage = StringBuilder()
-      if not self.__searchParameters.isValid(featureType,errMessage):
+      if not searchParameters.isValid(featureType,errMessage):
         self.__lastExecutionStatus = errMessage.toString()
         log(WARN,self.__lastExecutionStatus,None)
-        return
+        validationMessage = "\nValidation failed:\n" + self.__lastExecutionStatus 
+        #return
       searchPanel = dataSwingManager.createFeatureStoreSearchPanel(store)
       searchPanel.setAutomaticallySearch(False)
       #searchPanel.asJComponent() #Fuerza a inicializar el panel
-      st = searchPanel.search(self.__searchParameters)
+      st = searchPanel.search(searchParameters)
       if st != FeatureStoreSearchPanel.STATUS_OK:
-        self.__lastExecutionStatus = "Failed"
+        self.__lastExecutionStatus = "Failed"+validationMessage
         return
       model = searchPanel.getResultsTableModel()
       n = model.getColumnCount()
       if model.hasErrors():
-          self.__lastExecutionStatus = "Failed, error getting number of columns"
+          self.__lastExecutionStatus = "Failed, error getting number of columns"+validationMessage
           return
       if n<1:
-          self.__lastExecutionStatus = "Failed, no columns"
+          self.__lastExecutionStatus = "Failed, no columns"+validationMessage
           return
       if self.__result_should_have_rows == "true":
         n = model.getRowCount()
         if model.hasErrors():
-          self.__lastExecutionStatus = "Failed, error getting number of rows"
+          self.__lastExecutionStatus = "Failed, error getting number of rows"+validationMessage
           return
         if n<1:
-          self.__lastExecutionStatus = "Failed, no rows"
+          self.__lastExecutionStatus = "Failed, no rows"+validationMessage
           return
       if self.__first_row_of_results_must_have_values == "true":
         ok = False
@@ -145,17 +150,17 @@ class SearchBookmark(object):
           if x!=None:
             ok = True
         if model.hasErrors():
-          self.__lastExecutionStatus = "Failed, error getting cells of first row"
+          self.__lastExecutionStatus = "Failed, error getting cells of first row"+validationMessage
           return
         if not ok:
-          self.__lastExecutionStatus = "Failed, first row empty"
+          self.__lastExecutionStatus = "Failed, first row empty"+validationMessage
           return
       if model.hasErrors():
-          self.__lastExecutionStatus = "Failed, error getting data"
+          self.__lastExecutionStatus = "Failed, error getting data"+validationMessage
           return
-      self.__lastExecutionStatus = STATUS_OK
+      self.__lastExecutionStatus = STATUS_OK+validationMessage
     except:
-      self.__lastExecutionStatus = "Error"
+      self.__lastExecutionStatus = "Error"+validationMessage
     finally:
       DisposeUtils.disposeQuietly(searchPanel)
       DisposeUtils.disposeQuietly(model)

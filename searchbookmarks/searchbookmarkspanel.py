@@ -131,21 +131,27 @@ class TestSearchBookmarsPanel(FormPanel):
     thread.start_new_thread(lambda : self.__runtests(), tuple())
 
   def __runtests(self):
+    manager = ToolsLocator.getDisposableManager();
     taskStatus = ToolsLocator.getTaskStatusManager().createDefaultSimpleTaskStatus("Ejecutando tests")
     self.taskStatusController.bind(taskStatus)
     taskStatus.setRangeOfValues(0,len(self.__tests))
     self.taskStatusController.setVisible(True)
     failsCounter = 0
     for test in self.__tests:
-      log(INFO,"TEST: " + test.getName(),None)
-      log(INFO,"\n"+test.getSearchParameters().toString(),None)
       if taskStatus.isCancellationRequested():
         taskStatus.cancel()
         break
       taskStatus.message(test.getName())
-      test.run()
-      if test.isFailed():
-        failsCounter+=1
+      if test.isEnabled():
+        log(INFO,"TEST: " + test.getName(),None)
+        log(INFO,"\n"+test.getSearchParameters().toString(),None)
+        d1 = len(manager.getBoundDisposables())
+        test.run()
+        d2 = len(manager.getBoundDisposables())
+        if d2 > d1:
+          break
+        if test.isFailed():
+          failsCounter+=1
       taskStatus.incrementCurrentValue()
       sleep(0.01)
     taskStatus.terminate()
@@ -155,9 +161,11 @@ class TestSearchBookmarsPanel(FormPanel):
     
   def btnGoSearchPanel_click(self,*args):
     row = self.tblTests.getSelectedRow()
+
     if row<0 :
       self.message("Debera seleccionar un test")
       return
+    row = self.tblTests.getRowSorter().convertRowIndexToModel(row);
     test = self.__tests[row]
     store = test.getStore()
     if store == None:
@@ -166,19 +174,22 @@ class TestSearchBookmarsPanel(FormPanel):
     dataSwingManager = DALSwingLocator.getDataSwingManager()
     searchPanel = dataSwingManager.createFeatureStoreSearchPanel(store)
     searchPanel.setAutomaticallySearch(False)
-    searchPanel.put(test.getSearchParameters())
     ToolsSwingLocator.getWindowManager().showWindow(
       searchPanel.asJComponent(), 
       "Buscar: %s [Favorito %s]" % (test.getTableName(), test.getName()), 
-      WindowManager.WINDOW
+      WindowManager.MODE.WINDOW
     );
+    SwingUtilities.invokeLater(lambda : searchPanel.put(test.getSearchParameters().getCopy()))
+    
 
   def btnShowParameters_click(self, *args):
     toolsSwingManager = ToolsSwingLocator.getToolsSwingManager()
     row = self.tblTests.getSelectedRow()
+    
     if row<0 :
       self.message("Debera seleccionar un test")
       return
+    row = self.tblTests.getRowSorter().convertRowIndexToModel(row);
     test = self.__tests[row]
     toolsSwingManager .showZoomDialog(
       self.asJComponent(), 
@@ -245,7 +256,7 @@ class TestSearchBookmarsPanel(FormPanel):
     featureType.add("Activo","BOOLEAN")
     featureType.add("Tabla","STRING",100)
     featureType.add("Nombre","STRING",255)
-    featureType.add("Estado","STRING",1024)
+    featureType.add("Estado","STRING",10240)
     featureType.add("Favorito","STRING",10240)
 
     serverParameters = dataManager.createServerExplorerParameters("H2Spatial")
