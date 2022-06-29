@@ -118,14 +118,18 @@ class SearchBookmark(object):
       if not searchParameters.isValid(featureType,errMessage):
         self.__lastExecutionStatus = errMessage.toString()
         log(WARN,self.__lastExecutionStatus,None)
-        validationMessage = "\nValidation failed:\n" + self.__lastExecutionStatus 
+        validationMessage = " \nValidation failed:\n" + self.__lastExecutionStatus 
         #return
       searchPanel = dataSwingManager.createFeatureStoreSearchPanel(store)
       searchPanel.setAutomaticallySearch(False)
       #searchPanel.asJComponent() #Fuerza a inicializar el panel
       st = searchPanel.search(searchParameters)
       if st != FeatureStoreSearchPanel.STATUS_OK:
-        self.__lastExecutionStatus = "Failed"+validationMessage
+        self.__lastExecutionStatus = "Failed"
+        errorMessage = searchPanel.getLastErrorMessage();
+        if bool(errorMessage.strip()):
+          self.__lastExecutionStatus = self.__lastExecutionStatus+" "+errorMessage
+        self.__lastExecutionStatus = self.__lastExecutionStatus+validationMessage
         return
       model = searchPanel.getResultsTableModel()
       n = model.getColumnCount()

@@ -144,14 +144,15 @@ class TestSearchBookmarsPanel(FormPanel):
       taskStatus.message(test.getName())
       if test.isEnabled():
         log(INFO,"TEST: " + test.getName(),None)
-        log(INFO,"\n"+test.getSearchParameters().toString(),None)
         d1 = len(manager.getBoundDisposables())
         test.run()
         d2 = len(manager.getBoundDisposables())
-        if d2 > d1:
-          break
         if test.isFailed():
+          log(INFO,"\n"+test.getSearchParameters().toString(),None)
           failsCounter+=1
+        if d2 > d1:
+          log(INFO,u"No se han liberado todos los elementos usados en la búsqueda: " + test.getName(),None)
+          #break
       taskStatus.incrementCurrentValue()
       sleep(0.01)
     taskStatus.terminate()
@@ -199,6 +200,7 @@ class TestSearchBookmarsPanel(FormPanel):
         test.getLastExecutionStatus()
       ),
       False
+      #, WindowManager.MODE.WINDOW
     )
     
 
