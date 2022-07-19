@@ -25,8 +25,7 @@ from org.gvsig.app.project.documents.table import TableManager
 import addons.AccidentRateTests.searchbookmarks.searchbookmarks
 reload(addons.AccidentRateTests.searchbookmarks.searchbookmarks)
 from addons.AccidentRateTests.searchbookmarks.searchbookmarks import getSearchBookmarks
-
-
+from gvsig.commonsdialog import msgbox
 
 class TestSearchBookmarsTableModel(AbstractTableModel):
   def __init__(self, tests):
@@ -99,7 +98,9 @@ class TestSearchBookmarsPanel(FormPanel):
     taskStatus = ToolsLocator.getTaskStatusManager().createDefaultSimpleTaskStatus("Cargando favoritos")
     self.taskStatusController.bind(taskStatus)
     self.taskStatusController.setVisible(True)
-    tests = getSearchBookmarks(taskStatus)
+    tests, errors = getSearchBookmarks(taskStatus)
+    if errors > 0:
+      msgbox("Ha fallado la carga de %s favoritos." %errors)
     self.taskStatusController.setVisible(False)
     self.setTableModel(tests)
 
@@ -266,6 +267,7 @@ class TestSearchBookmarsPanel(FormPanel):
     serverExplorer = dataManager.openServerExplorer("H2Spatial", serverParameters)
 
     newParametersTarget = serverExplorer.getAddParameters()
+    
     newParametersTarget.setDynValue("Table", name)
     newParametersTarget.setDefaultFeatureType(featureType)
     serverExplorer.add("H2Spatial", newParametersTarget, True)

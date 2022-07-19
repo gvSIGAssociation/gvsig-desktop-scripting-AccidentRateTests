@@ -8,6 +8,9 @@ from java.lang import StringBuilder
 
 from java.util import Properties
 
+import sys
+from java.lang import Throwable
+
 from org.gvsig.tools import ToolsLocator
 from org.gvsig.tools.dispose import DisposeUtils
 
@@ -59,28 +62,34 @@ class SearchBookmark(object):
     return self.__enabled
     
   def load(self):
-    persistenceManager = ToolsLocator.getPersistenceManager()
-    fname = os.path.splitext(self.__pathname)[0]
-    self.__name = os.path.basename(fname).split("!")[2]
-
-    stream = FileInputStream(fname)
-    self.__searchParameters = persistenceManager.getObject(stream)
-    stream.close()
-    
-    stream = FileInputStream(self.__pathname)
-    props = Properties()
-    props.load(stream)
-    stream.close()
-    self.__table_name = props.getProperty("table_name")
-    self.__result_should_have_rows = props.getProperty("result_should_have_rows", "true").lower()
-    self.__first_row_of_results_must_have_values = props.getProperty("first_row_of_results_must_have_values", "true").lower()
-    self.__enabled = props.getProperty("enabled", "true").lower()
-    if self.__enabled == "true":
-      self.__enabled = True
-    else:
-      self.__enabled = False
-    if self.__searchParameters.getQuery().getLimit() == 0:
-      self.__searchParameters.getQuery().clearLimit()
+    try:
+      persistenceManager = ToolsLocator.getPersistenceManager()
+      fname = os.path.splitext(self.__pathname)[0]
+      self.__name = os.path.basename(fname).split("!")[2]
+  
+      stream = FileInputStream(fname)
+      self.__searchParameters = persistenceManager.getObject(stream)
+      stream.close()
+      
+      stream = FileInputStream(self.__pathname)
+      props = Properties()
+      props.load(stream)
+      stream.close()
+      self.__table_name = props.getProperty("table_name")
+      self.__result_should_have_rows = props.getProperty("result_should_have_rows", "true").lower()
+      self.__first_row_of_results_must_have_values = props.getProperty("first_row_of_results_must_have_values", "true").lower()
+      self.__enabled = props.getProperty("enabled", "true").lower()
+      if self.__enabled == "true":
+        self.__enabled = True
+      else:
+        self.__enabled = False
+      if self.__searchParameters.getQuery().getLimit() == 0:
+        self.__searchParameters.getQuery().clearLimit()
+      return True
+    except Throwable, ex:
+      ex = sys.exc_info()[1]
+      gvsig.logger("Can't load module 'jgit'. " + str(ex), gvsig.LOGGER_WARN, ex)
+      return False
 
   def getStore(self):
     dataManager = DALLocator.getDataManager()
@@ -180,6 +189,7 @@ def getSearchBookmarks(taskStatus = None):
   folder = gvsig.getResource(__file__,"..","data","searchbookmarks")
   files = os.listdir(folder)
   taskStatus.setRangeOfValues(0,len(files))
+  countErrors = 0
   for f in files:
     if taskStatus.isCancellationRequested():
       taskStatus.cancel()
@@ -191,12 +201,16 @@ def getSearchBookmarks(taskStatus = None):
       taskStatus.message(s)
       searchBookmark = SearchBookmark(os.path.join(folder,f))
       taskStatus.message(searchBookmark.getName())
-      searchBookmark .load()
-      searchBookmarks.append(searchBookmark)
+      if searchBookmark .load():
+        searchBookmarks.append(searchBookmark)
+      else:
+        countErrors += 1
     taskStatus.incrementCurrentValue()
   taskStatus.terminate()
+  if countErrors > 0:
+    taskStatus.message("Ha fallado la carga de %s favoritos." %countErrors)
   searchBookmarks.sort(key=lambda e:e.getName())
-  return searchBookmarks
+  return searchBookmarks, countErrors
   
 def main(*args):
     for x in getSearchBookmarks():
