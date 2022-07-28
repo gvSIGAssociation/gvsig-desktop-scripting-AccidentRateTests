@@ -98,9 +98,23 @@ class TestSearchBookmarsPanel(FormPanel):
     taskStatus = ToolsLocator.getTaskStatusManager().createDefaultSimpleTaskStatus("Cargando favoritos")
     self.taskStatusController.bind(taskStatus)
     self.taskStatusController.setVisible(True)
-    tests, errors = getSearchBookmarks(taskStatus)
-    if errors > 0:
-      msgbox("Ha fallado la carga de %s favoritos." %errors)
+    tests, countErrors, errors = getSearchBookmarks(taskStatus)
+    if countErrors > 0:
+      msg  = "Ha fallado la carga de %s favoritos:" %countErrors
+      for error in errors:
+        msg  =  msg + "\n"+error.getName()
+      toolsSwingManager = ToolsSwingLocator.getToolsSwingManager()
+      toolsSwingManager .showZoomDialog(
+        self.asJComponent(), 
+        "Carga de favoritos", 
+        msg,
+        False
+        #, WindowManager.MODE.WINDOW
+      )
+
+
+
+      
     self.taskStatusController.setVisible(False)
     self.setTableModel(tests)
 
@@ -116,7 +130,7 @@ class TestSearchBookmarsPanel(FormPanel):
 
   def tblTest_selectionChanged(self, *args):
     row = self.tblTests.getSelectedRow()
-    self.message("Linea %s de %s" % (row,len(self.__tests)))
+    self.message("Linea %s de %s" % (row+1,len(self.__tests)))
     
   def btnSelectAll_click(self, *args):
     for test in self.__tests:

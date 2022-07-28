@@ -190,6 +190,7 @@ def getSearchBookmarks(taskStatus = None):
   files = os.listdir(folder)
   taskStatus.setRangeOfValues(0,len(files))
   countErrors = 0
+  errors = []
   for f in files:
     if taskStatus.isCancellationRequested():
       taskStatus.cancel()
@@ -205,13 +206,17 @@ def getSearchBookmarks(taskStatus = None):
         searchBookmarks.append(searchBookmark)
       else:
         countErrors += 1
+        errors.append(searchBookmark)
     taskStatus.incrementCurrentValue()
   taskStatus.terminate()
   if countErrors > 0:
     taskStatus.message("Ha fallado la carga de %s favoritos." %countErrors)
   searchBookmarks.sort(key=lambda e:e.getName())
-  return searchBookmarks, countErrors
+  return searchBookmarks, countErrors, errors
   
 def main(*args):
-    for x in getSearchBookmarks():
+    bookMarks, countErrors, errors =  getSearchBookmarks()
+    for x in bookMarks:
       print x.getName(), x.getTableName(), x.isEnabled()
+    print countErrors
+    print errors
