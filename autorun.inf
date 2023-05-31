@@ -10,3 +10,8 @@ description =
 createdBy = 
 version = 
 
+[properties]
+autorun.group.name = sigcar
+autorun.group.order = 3000
+autorun.order = 2000
+

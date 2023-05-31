@@ -1,22 +1,22 @@
 #
-#Fri Jul 29 07:46:20 CEST 2022
+#Wed May 17 12:22:40 CEST 2023
 owner=
 code=AccidentRateTests
-download-url=https\://github.com/gvSIGAssociation/gvsig-desktop-scripting-AccidentRateTests/releases/download/1.0.0-4/gvSIG-desktop-2.6.0-AccidentRateTests-1.0.0-4-testing-all-all-j1_7.gvspkg
 java-version=j1_7
-operating-system=all
-description=
 official=true
 type=Script
-web-url=
-version=1.0.0-4
-buildNumber=4
-owner-url=
+version=1.0.0-5
+state=testing
+operating-system=all
 dependencies=
 sources-url=
-name=AccidentRateTests
-gvSIG-version=2.6.0
-state=testing
-categories=
-model-version=1.0.1
+web-url=
 architecture=all
+model-version=1.0.1
+categories=
+description=
+owner-url=
+buildNumber=5
+download-url=https\://github.com/gvSIGAssociation/gvsig-desktop-scripting-AccidentRateTests/releases/download/1.0.0-5/gvSIG-desktop-2.6.0-AccidentRateTests-1.0.0-5-testing-all-all-j1_7.gvspkg
+gvSIG-version=2.6.0
+name=AccidentRateTests
